@@ -19,22 +19,17 @@ if cookie_content:
 else:
     print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
 
-# 🌟 2. สร้าง YDL_OPTIONS แบบยืดหยุ่นขั้นสุด
+# 🌟 2. สร้าง YDL_OPTIONS แบบให้ yt-dlp จัดการสลับ Client เอง
 YDL_OPTIONS = {
-    'format': 'ba/bestaudio/b', # กวาดทุกอย่าง ถ้าไม่มีเสียงล้วนก็เอาวิดีโอ+เสียง
+    'format': 'bestaudio/best', # โหลดเสียงที่ดีที่สุด
     'noplaylist': True,
-    'quiet': False, 
+    'quiet': False, # เปิด Log ไว้ดู Error
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
-    'extractor_args': {
-        'youtube': {
-            # ใช้ web ก่อน ถ้าไม่ได้ให้สลับไป android
-            'player_client': ['web', 'android'] 
-        }
-    }
+    # ลบ extractor_args ออก ปล่อยให้ระบบเจาะคลิปติดเรท/คลิปผีเอง
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
@@ -89,11 +84,11 @@ def check_queue(interaction, error=None):
 @bot.tree.command(name="play", description="เล่นเพลงหรือเพิ่มเพลงเข้าในคิวจากการค้นหาหรือจากลิงก์")
 @app_commands.describe(search="ชื่อเพลงหรือลิงก์ YouTube")
 async def play(interaction: discord.Interaction, search: str):
-    # 1. เช็คว่าผู้ใช้อยู่ในห้องเสียงไหม (ไม่ติดดีเลย์)
+    # 1. เช็คว่าผู้ใช้อยู่ในห้องเสียงไหม
     if not interaction.user.voice:
         return await interaction.response.send_message("❌ กูจะรู้ไหมว่าคุณมึงอยู่ห้องไหน!", ephemeral=True)
 
-    # 2. 🌟 ส่ง defer ทันที เพื่อขอเวลา Discord คิดนานกว่า 3 วินาที
+    # 2. ส่ง defer ทันที เพื่อขอเวลา Discord คิดนานกว่า 3 วินาที
     await interaction.response.defer()
 
     # --- ระบบตัดลิงก์เพลย์ลิสต์ (&list=...) ---
@@ -102,7 +97,7 @@ async def play(interaction: discord.Interaction, search: str):
     vc = interaction.guild.voice_client
     if not vc:
         try:
-            # เพิ่ม timeout และ self_deaf เพื่อความเสถียรบน Railway
+            # เพิ่ม timeout และ self_deaf
             vc = await interaction.user.voice.channel.connect(timeout=60.0, self_deaf=True)
         except Exception as e:
             return await interaction.followup.send(f"❌ เข้าห้องไม่ได้: {e}")
@@ -116,7 +111,7 @@ async def play(interaction: discord.Interaction, search: str):
             # ค้นหาเพลง
             query = f"ytsearch:{clean_search}" if "http" not in clean_search else clean_search
             
-            # 🌟 จุดแก้สำคัญ: โยนการโหลดข้อมูลไปทำเบื้องหลัง (Background Thread) บอทจะได้ไม่ค้าง
+            # โยนการโหลดข้อมูลไปทำเบื้องหลัง (Background Thread) บอทจะได้ไม่ค้าง
             info_data = await asyncio.to_thread(ydl.extract_info, query, download=False)
             
             # เช็คว่าหาข้อมูลเจอไหม
@@ -143,7 +138,7 @@ async def play(interaction: discord.Interaction, search: str):
 
             # ตรวจสอบว่ามี url สำหรับเล่นเพลงจริงๆ
             if not song_data['url']:
-                 return await interaction.followup.send("❌ ดึงไฟล์เสียงไม่ได้ ลองเพลงอื่นดูนะ!")
+                 return await interaction.followup.send("❌ ดึงไฟล์เสียงไม่ได้ คลิปนี้อาจจะถูกจำกัดการเข้าถึงนะ!")
 
             if vc.is_playing() or vc.is_paused():
                 song_queue[guild_id].append(song_data)

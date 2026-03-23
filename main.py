@@ -15,9 +15,9 @@ YDL_OPTIONS = {
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt',
-    
-    # เพิ่มบรรทัดเหล่านี้เพื่อข้ามข้อผิดพลาดเรื่อง Format
     'ignoreerrors': True,
+    'cachedir': False,
+    'youtube_include_dash_manifest': False,
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
@@ -26,9 +26,11 @@ YDL_OPTIONS = {
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
-FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+FFMPEG_OPTIONS = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
+
 # --- ตัวแปรเก็บข้อมูลเพลง (แยกตามเซิร์ฟเวอร์) ---
 song_queue = {}    # คิวเพลงถัดไป
 song_history = {}  # ประวัติเพลงที่เล่นไปแล้ว
@@ -43,6 +45,7 @@ class MonkeyBot(commands.Bot):
     async def setup_hook(self):
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")
+
     async def on_ready(self):
         print(f"✅ บอทออนไลน์แล้วในชื่อ: {self.user}")
         print(f"🆔 ID: {self.user.id}")
@@ -59,6 +62,7 @@ def check_queue(interaction, error=None):
         next_song = song_queue[guild_id].pop(0)
         
         async def play_next():
+            # ลบ executable="ffmpeg" ออกเพื่อให้ Railway หาเอง
             source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: check_queue(interaction, e))
             
@@ -84,7 +88,11 @@ async def play(interaction: discord.Interaction, search: str):
 
     vc = interaction.guild.voice_client
     if not vc:
-        vc = await interaction.user.voice.channel.connect()
+        try:
+            # เพิ่ม timeout และ self_deaf เพื่อความเสถียรบน Railway
+            vc = await interaction.user.voice.channel.connect(timeout=60.0, self_deaf=True)
+        except Exception as e:
+            return await interaction.followup.send(f"❌ เข้าห้องไม่ได้: {e}")
 
     guild_id = interaction.guild_id
     if guild_id not in song_queue: song_queue[guild_id] = []
@@ -96,10 +104,19 @@ async def play(interaction: discord.Interaction, search: str):
             query = f"ytsearch:{clean_search}" if "http" not in clean_search else clean_search
             info_data = ydl.extract_info(query, download=False)
             
-            if 'entries' in info_data and len(info_data['entries']) > 0:
+            # แก้ปัญหา NoneType: เช็คว่าหาข้อมูลเจอไหม
+            if info_data is None:
+                return await interaction.followup.send("❌ ไม่สามารถดึงข้อมูลเพลงได้ (YouTube อาจบล็อก IP หรือคุ้กกี้หมดอายุ)")
+
+            if 'entries' in info_data:
+                if not info_data['entries']:
+                    return await interaction.followup.send("❌ ค้นหาเพลงนี้ไม่พบ!")
                 info = info_data['entries'][0]
             else:
                 info = info_data
+
+            if info is None:
+                return await interaction.followup.send("❌ ข้อมูลเพลงว่างเปล่า!")
 
             song_data = {
                 'url': info['url'], 
@@ -140,6 +157,7 @@ async def back(interaction: discord.Interaction):
         
         song_queue[guild_id].insert(0, current_song)
         
+        # ลบ executable="ffmpeg" ออก
         source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], **FFMPEG_OPTIONS)
         if vc.is_playing(): vc.stop()
         
@@ -154,8 +172,8 @@ async def back(interaction: discord.Interaction):
 @bot.tree.command(name="skip", description="ข้ามเพลงปัจจุบัน")
 async def skip(interaction: discord.Interaction):
     vc = interaction.guild.voice_client
-    if vc and vc.is_playing():
-        vc.stop() # stop จะไปเรียก check_queue ให้อัตโนมัติ
+    if vc and (vc.is_playing() or vc.is_paused()):
+        vc.stop() 
         await interaction.response.send_message("⏩ ข้ามเพลงให้แล้วจ้า!")
     else:
         await interaction.response.send_message("❌ ไม่ได้เล่นเพลงอะไรอยู่จะให้ข้ามอะไรก่อน!", ephemeral=True)

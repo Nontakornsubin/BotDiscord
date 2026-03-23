@@ -19,23 +19,23 @@ class MonkeyBot(commands.Bot):
         super().__init__(command_prefix="!Monkey", intents=intents)
 
     async def setup_hook(self):
-        # 🌟 รวมพลัง Node ที่เสถียรที่สุด (ใช้ http เพื่อเลี่ยงปัญหา SSL Error)
+        # 🌟 คัดมาให้แล้ว! Node ระดับตำนานที่ยังรอดชีวิตอยู่
         nodes = [
             wavelink.Node(
-                uri="http://lavalink.proxy-it.my.id:80", 
+                uri="http://lava.link:80", # 1. ตัวมาตรฐานโลก (เสถียรสุด)
                 password="youshallnotpass"
             ),
             wavelink.Node(
-                uri="http://lava.link:80", 
-                password="youshallnotpass"
+                uri="http://lavalink.oops.wtf:80", # 2. ตัวสำรองยอดฮิต
+                password="www.freelavalink.pw"
             ),
             wavelink.Node(
-                uri="http://lavalink.jirayu.net:80", 
+                uri="http://lavalink.jirayu.net:80", # 3. Node ของคนไทย (แรงและลื่น)
                 password="youshallnotpass"
             )
         ]
         
-        # เชื่อมต่อระบบ Pool (ถ้าตัวไหนล่ม มันจะข้ามไปตัวที่ใช้งานได้เอง)
+        # เชื่อมต่อระบบ (ถ้าตัวแรกไม่ติด มันจะข้ามไปตัวที่ 2-3 เองอัตโนมัติ)
         await wavelink.Pool.connect(client=self, nodes=nodes)
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")

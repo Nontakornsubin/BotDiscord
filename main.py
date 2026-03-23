@@ -8,16 +8,17 @@ import asyncio
 from myserver import server_on
 
 YDL_OPTIONS = {
-    'format': 'bestaudio/best/m4a/ogg/wav',
+    'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt',
-    'ignoreerrors': True,
-    'source_address': '0.0.0.0', # บังคับใช้ IPv4 (สำคัญมากบน Railway)
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', # ปลอมตัวเป็น Browser
+    'source_address': '0.0.0.0', 
+    # --- เพิ่ม 2 บรรทัดนี้เพื่อหลอกระบบ YouTube ---
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'referer': 'https://www.google.com/',
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

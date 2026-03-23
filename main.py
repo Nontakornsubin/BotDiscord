@@ -19,23 +19,24 @@ class MonkeyBot(commands.Bot):
         super().__init__(command_prefix="!Monkey", intents=intents)
 
     async def setup_hook(self):
-        # 🌟 คัดมาให้แล้ว! Node ระดับตำนานที่ยังรอดชีวิตอยู่
+        # 🌟 คัดมาให้ใหม่! Node ที่ "ยังมีลมหายใจ" และ Railway รู้จักแน่นอน
+        # ผมใส่ https และพอร์ตมาตรฐานกลับไป เพราะ DNS บน Railway ชอบแบบนี้มากกว่าครับ
         nodes = [
             wavelink.Node(
-                uri="http://lava.link:80", # 1. ตัวมาตรฐานโลก (เสถียรสุด)
-                password="youshallnotpass"
+                uri="https://lava-v4.ajieblogs.eu.org", # Node ตัวท็อป เสถียรสูง
+                password="https://dsc.gg/ajidevserver"
             ),
             wavelink.Node(
-                uri="http://lavalink.oops.wtf:80", # 2. ตัวสำรองยอดฮิต
+                uri="https://lavalink.lexnet.cc", # ตัวสำรองแรงๆ
+                password="lexn3t_@*_!"
+            ),
+            wavelink.Node(
+                uri="https://lavalink.oops.wtf", # ตัวช่วยสุดท้าย
                 password="www.freelavalink.pw"
-            ),
-            wavelink.Node(
-                uri="http://lavalink.jirayu.net:80", # 3. Node ของคนไทย (แรงและลื่น)
-                password="youshallnotpass"
             )
         ]
         
-        # เชื่อมต่อระบบ (ถ้าตัวแรกไม่ติด มันจะข้ามไปตัวที่ 2-3 เองอัตโนมัติ)
+        # เชื่อมต่อระบบ (ถ้าตัวแรกตาย มันจะกระโดดไปตัวที่ 2-3 เองอัตโนมัติ)
         await wavelink.Pool.connect(client=self, nodes=nodes)
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")
@@ -89,7 +90,7 @@ async def play(interaction: discord.Interaction, search: str):
             player: wavelink.Player = await interaction.user.voice.channel.connect(cls=wavelink.Player, timeout=20.0, self_deaf=True)
             player.home_channel = interaction.channel
         except Exception as e:
-            return await interaction.followup.send(f"❌ บอทเข้าห้องไม่ได้ (Lavalink อาจจะเต็ม): {e}")
+            return await interaction.followup.send(f"❌ บอทเข้าห้องไม่ได้ (Lavalink อาจจะล่มหรือเต็ม): {e}")
     else:
         player: wavelink.Player = interaction.guild.voice_client
 
@@ -113,7 +114,7 @@ async def play(interaction: discord.Interaction, search: str):
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
-        await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {e}")
+        await interaction.followup.send(f"❌ เกิดข้อผิดพลาดในการดึงเพลง: {e}")
 
 # --- คำสั่ง: /queue (แบ่งหน้าอัตโนมัติ) ---
 @bot.tree.command(name="queue", description="ดูรายการเพลงในคิว")
@@ -162,7 +163,7 @@ async def back(interaction: discord.Interaction):
         await player.skip(force=True)
         await interaction.response.send_message(f"⏪ **ย้อนกลับไปที่:** {prev_track.title}")
     else:
-        await interaction.response.send_message("❌ ไม่ประวัติเพลง!", ephemeral=True)
+        await interaction.response.send_message("❌ ไม่มีประวัติเพลง!", ephemeral=True)
 
 # --- คำสั่ง: /stop ---
 @bot.tree.command(name="stop", description="หยุดและออกจากห้อง")

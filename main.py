@@ -18,24 +18,20 @@ else:
     print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
 
 # 🌟 2. ตั้งค่า YDL_OPTIONS และ FFMPEG_OPTIONS
+# 🌟 2. ตั้งค่า YDL_OPTIONS แบบเอาตัวรอดขั้นสุด
 YDL_OPTIONS = {
-    'format': 'bestaudio/best', # กลับมาใช้แบบมาตรฐาน
+    'format': 'bestaudio/best', 
     'noplaylist': True,
     'quiet': False, 
     'no_warnings': True,
-    'default_search': 'ytsearch',
+    'default_search': 'scsearch', # เปลี่ยนค่าเริ่มต้นเป็น SoundCloud
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
-    
-    # 🌟 1. ทะลวงการบล็อกระดับประเทศ/ภูมิภาคที่ YouTube ชอบแอบทำกับ IP เซิร์ฟเวอร์
-    'geo_bypass': True,
-    
     'extractor_args': {
         'youtube': {
-            # 🌟 2. ปลอมตัวเป็นระบบหลังบ้านของ YouTube (web_creator) และ Smart TV
-            # ซึ่งเป็น 2 ช่องทางที่ YouTube แทบจะไม่เคยบล็อก Format เลย!
-            'player_client': ['web_creator', 'tv', 'mweb'] 
+            # 🌟 บังคับให้ปลอมตัวเป็นแอปบน iPhone หรือ iPad เท่านั้น!
+            'player_client': ['ios', 'mweb'] 
         }
     }
 }
@@ -121,7 +117,7 @@ async def play(interaction: discord.Interaction, search: str):
 
     with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
         try:
-            query = f"ytsearch:{clean_search}" if "http" not in clean_search else clean_search
+            query = f"scsearch:{clean_search}" if "http" not in clean_search else clean_search
             info_data = await asyncio.to_thread(ydl.extract_info, query, download=False)
             
             if info_data is None:

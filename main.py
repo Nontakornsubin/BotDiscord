@@ -8,20 +8,28 @@ import asyncio
 from myserver import server_on
 
 YDL_OPTIONS = {
-    # ปรับให้เลือก bestaudio ถ้าไม่มีให้เอา format อะไรก็ได้ที่มีเสียง (ba) หรือดีที่สุดเท่าที่หาได้ (b)
-    'format': 'bestaudio/best', 
+    # 1. เปลี่ยนการเลือกฟอร์แมตให้กว้างที่สุด (ba = best audio, b = best)
+    'format': 'ba/b', 
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
-    'cookiefile': 'cookies.txt',
     
-    # --- ส่วนสำคัญที่ต้องเพิ่มเพื่อแก้ Requested format ---
-    'ignoreerrors': False,
-    'extract_flat': False,
-    'youtube_include_dash_manifest': False, # ปิดอันนี้ช่วยให้หา format พื้นฐานเจอง่ายขึ้น
+    # ดึงคุ้กกี้มาใช้ (ถ้ามี)
+    'cookiefile': 'cookies.txt' if cookie_content else None,
+    
+    'ignoreerrors': False, # เปิดไว้เพื่อดู Error เหมือนเดิมดีแล้วครับ
     'source_address': '0.0.0.0',
+    
+    # 🌟 2. ลบ youtube_include_dash_manifest ออก เพื่อให้มันมองเห็นไฟล์เสียงทุกแบบ
+    
+    # 🌟 3. ไม้ตายใหม่: หลอก YouTube ว่าเราเปิดจากแอปมือถือ Android (แก้บล็อก 99%)
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android', 'web']
+        }
+    }
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

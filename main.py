@@ -15,21 +15,19 @@ if cookie_content:
 
 # 🌟 2. จากนั้นค่อยสร้าง YDL_OPTIONS แล้วเรียกใช้ตัวแปรข้างบน
 YDL_OPTIONS = {
-    'format': 'ba/b', 
+    'format': 'bestaudio/best', # 👈 เปลี่ยนตรงนี้เพื่อให้ชัวร์ว่าหาไฟล์เสียงที่ดีที่สุดเสมอ
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
-    
-    # ตอนนี้มันจะรู้จัก cookie_content แล้ว
     'cookiefile': 'cookies.txt' if cookie_content else None,
-    
     'ignoreerrors': False,
     'source_address': '0.0.0.0',
     'extractor_args': {
         'youtube': {
-            'player_client': ['android', 'web']
+            # 👈 เอา android ออกชั่วคราว เพราะบางครั้ง client android ของ YouTube ไม่มี format เสียงที่ต้องการ
+            'player_client': ['web'] 
         }
     }
 }

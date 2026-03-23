@@ -2,48 +2,10 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-import yt_dlp
+import wavelink
 import asyncio
 
 from myserver import server_on
-
-# 🌟 1. ประกาศตัวแปรและสร้างไฟล์คุ้กกี้
-cookie_content = os.getenv('YT_COOKIES')
-if cookie_content:
-    formatted_cookies = cookie_content.replace('\\n', '\n') 
-    with open('cookies.txt', 'w', encoding='utf-8') as f:
-        f.write(formatted_cookies)
-    print("✅ สร้างไฟล์ cookies.txt สำเร็จ!")
-else:
-    print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
-
-# 🌟 2. ตั้งค่า YDL_OPTIONS และ FFMPEG_OPTIONS
-# 🌟 2. ตั้งค่า YDL_OPTIONS แบบเอาตัวรอดขั้นสุด
-YDL_OPTIONS = {
-    'format': 'bestaudio/best', 
-    'noplaylist': True,
-    'quiet': False, 
-    'no_warnings': True,
-    'default_search': 'scsearch', # เปลี่ยนค่าเริ่มต้นเป็น SoundCloud
-    'nocheckcertificate': True,
-    'cookiefile': 'cookies.txt' if cookie_content else None,
-    'source_address': '0.0.0.0',
-    'extractor_args': {
-        'youtube': {
-            # 🌟 บังคับให้ปลอมตัวเป็นแอปบน iPhone หรือ iPad เท่านั้น!
-            'player_client': ['ios', 'mweb'] 
-        }
-    }
-}
-
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
-    'options': '-vn'
-}
-
-# --- ตัวแปรเก็บข้อมูลเพลง ---
-song_queue = {}    
-song_history = {}  
 
 class MonkeyBot(commands.Bot):
     def __init__(self):
@@ -53,6 +15,15 @@ class MonkeyBot(commands.Bot):
         super().__init__(command_prefix="!Monkey", intents=intents)
 
     async def setup_hook(self):
+        # 🌟 ตั้งค่า Wavelink เพื่อเชื่อมต่อกับเซิร์ฟเวอร์ Lavalink สาธารณะ (ฟรี & ทะลวง YouTube 100%)
+        nodes = [
+            wavelink.Node(
+                uri="https://lava-v4.ajieblogs.eu.org",
+                password="https://dsc.gg/ajidevserver"
+            )
+        ]
+        # เชื่อมต่อระบบ
+        await wavelink.Pool.connect(client=self, nodes=nodes)
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")
 
@@ -62,35 +33,38 @@ class MonkeyBot(commands.Bot):
 
 bot = MonkeyBot()
 
-# --- ฟังก์ชันจัดการคิวเพลง ---
-def check_queue(interaction, error=None):
-    if error:
-        print(f"Player error: {error}")
+# --- อีเวนต์: เมื่อเชื่อมต่อ Lavalink สำเร็จ ---
+@bot.event
+async def on_wavelink_node_ready(payload: wavelink.NodeReadyEventPayload):
+    print(f"🔥 Lavalink Node เชื่อมต่อสำเร็จ! พร้อมทะลวง YouTube ทุกคลิป!")
+
+# --- อีเวนต์: แจ้งเตือนเมื่อเล่นเพลงถัดไปในคิว ---
+@bot.event
+async def on_wavelink_track_start(payload: wavelink.TrackStartEventPayload):
+    player: wavelink.Player = payload.player
+    if not player:
+        return
         
-    guild_id = interaction.guild_id
-    vc = interaction.guild.voice_client
+    track: wavelink.Playable = payload.track
+
+    # ป้องกันไม่ให้บอทส่งข้อความซ้ำซ้อนตอนเราเพิ่งพิมพ์คำสั่ง /play
+    if hasattr(player, 'is_first_play') and player.is_first_play:
+        player.is_first_play = False
+        return
+
+    embed = discord.Embed(
+        title="⏭️ กำลังเล่นเพลงถัดไปในคิว",
+        description=f"**[{track.title}]({track.uri})**",
+        color=discord.Color.purple()
+    )
+    if track.artwork:
+        embed.set_thumbnail(url=track.artwork)
+    embed.set_footer(text="Monkey Music Bot 🐒 x Lavalink")
     
-    if guild_id in song_queue and song_queue[guild_id] and vc:
-        next_song = song_queue[guild_id].pop(0)
-        
-        async def play_next():
-            source = discord.FFmpegPCMAudio(next_song['url'], **FFMPEG_OPTIONS)
-            vc.play(source, after=lambda e: check_queue(interaction, e))
-            
-            if guild_id not in song_history: song_history[guild_id] = []
-            song_history[guild_id].append(next_song)
-            
-            embed = discord.Embed(
-                title="⏭️ กำลังเล่นเพลงถัดไปในคิว",
-                description=f"**[{next_song['title']}]({next_song.get('webpage_url', '')})**",
-                color=discord.Color.purple()
-            )
-            if next_song.get('thumbnail'):
-                embed.set_thumbnail(url=next_song['thumbnail'])
-            embed.set_footer(text="Monkey Music Bot 🐒")
-            await interaction.channel.send(embed=embed)
-            
-        asyncio.run_coroutine_threadsafe(play_next(), bot.loop)
+    # ส่งข้อความไปยังห้องแชทล่าสุดที่สั่งเพลง
+    if hasattr(player, 'home_channel'):
+        await player.home_channel.send(embed=embed)
+
 
 # --- Slash Command: /play ---
 @bot.tree.command(name="play", description="เล่นเพลงหรือเพิ่มเพลงเข้าในคิว")
@@ -102,96 +76,76 @@ async def play(interaction: discord.Interaction, search: str):
 
     await interaction.response.defer()
 
-    clean_search = search.split('&')[0] if "youtube.com" in search else search
-
-    vc = interaction.guild.voice_client
-    if not vc:
+    # ดึงตัวเล่นเพลง หรือสร้างใหม่ถ้ายังไม่เข้าห้อง
+    if not interaction.guild.voice_client:
         try:
-            vc = await interaction.user.voice.channel.connect(timeout=60.0, self_deaf=True)
+            player: wavelink.Player = await interaction.user.voice.channel.connect(cls=wavelink.Player, timeout=60.0, self_deaf=True)
+            player.home_channel = interaction.channel # จำห้องแชทไว้ส่งข้อความ
         except Exception as e:
             return await interaction.followup.send(f"❌ เข้าห้องไม่ได้: {e}")
+    else:
+        player: wavelink.Player = interaction.guild.voice_client
+        player.home_channel = interaction.channel
 
-    guild_id = interaction.guild_id
-    if guild_id not in song_queue: song_queue[guild_id] = []
-    if guild_id not in song_history: song_history[guild_id] = []
+    try:
+        # 🌟 ค้นหาเพลงผ่านระบบของ Lavalink (รองรับทั้งชื่อและลิงก์ YouTube เต็มรูปแบบ)
+        tracks: wavelink.Search = await wavelink.Playable.search(search)
+        if not tracks:
+            return await interaction.followup.send("❌ ค้นหาเพลงนี้ไม่พบ! (ลองพิมพ์ชื่อเพลงใหม่ดูนะ)")
 
-    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
-        try:
-            query = f"scsearch:{clean_search}" if "http" not in clean_search else clean_search
-            info_data = await asyncio.to_thread(ydl.extract_info, query, download=False)
+        # เลือกเพลงแรกที่หาเจอ
+        if isinstance(tracks, wavelink.Playlist):
+            track: wavelink.Playable = tracks.tracks[0]
+        else:
+            track: wavelink.Playable = tracks[0]
+
+        if not player.playing:
+            player.is_first_play = True # ทำเครื่องหมายว่าเป็นเพลงแรกที่สั่ง
+            await player.play(track, volume=100)
             
-            if info_data is None:
-                return await interaction.followup.send("❌ ไม่สามารถดึงข้อมูลเพลงได้")
+            embed = discord.Embed(
+                title="🎶 กำลังเล่นเพลง",
+                description=f"**[{track.title}]({track.uri})**",
+                color=discord.Color.green()
+            )
+            if track.artwork:
+                embed.set_thumbnail(url=track.artwork)
+            embed.add_field(name="สั่งโดย", value=interaction.user.mention)
+            embed.set_footer(text="Monkey Music Bot 🐒 x Lavalink")
+            await interaction.followup.send(embed=embed)
+        else:
+            await player.queue.put_wait(track)
+            embed = discord.Embed(
+                title="📝 เพิ่มลงคิวแล้ว",
+                description=f"**[{track.title}]({track.uri})**\nลำดับที่: `{player.queue.count}`",
+                color=discord.Color.blue()
+            )
+            if track.artwork:
+                embed.set_thumbnail(url=track.artwork)
+            embed.add_field(name="สั่งโดย", value=interaction.user.mention)
+            embed.set_footer(text="Monkey Music Bot 🐒 x Lavalink")
+            await interaction.followup.send(embed=embed)
 
-            if 'entries' in info_data:
-                if not info_data['entries']:
-                    return await interaction.followup.send("❌ ค้นหาเพลงนี้ไม่พบ!")
-                info = info_data['entries'][0]
-            else:
-                info = info_data
+    except Exception as e:
+        await interaction.followup.send(f"❌ เกิดข้อผิดพลาดจากเซิร์ฟเวอร์เพลง: {e}")
 
-            if info is None:
-                return await interaction.followup.send("❌ ข้อมูลเพลงว่างเปล่า!")
-
-            song_data = {
-                'url': info.get('url'), 
-                'title': info.get('title', 'Unknown Title'), 
-                'webpage_url': info.get('webpage_url', ''),
-                'thumbnail': info.get('thumbnail', '')
-            }
-
-            if not song_data['url']:
-                 return await interaction.followup.send("❌ ดึงไฟล์เสียงไม่ได้ คลิปนี้อาจจะถูกจำกัดการเข้าถึงนะ!")
-
-            if vc.is_playing() or vc.is_paused():
-                song_queue[guild_id].append(song_data)
-                embed = discord.Embed(
-                    title="📝 เพิ่มลงคิวแล้ว",
-                    description=f"**[{song_data['title']}]({song_data['webpage_url']})**\nลำดับที่: `{len(song_queue[guild_id])}`",
-                    color=discord.Color.blue()
-                )
-                if song_data['thumbnail']:
-                    embed.set_thumbnail(url=song_data['thumbnail'])
-                embed.add_field(name="สั่งโดย", value=interaction.user.mention)
-                embed.set_footer(text="Monkey Music Bot 🐒")
-                await interaction.followup.send(embed=embed)
-            else:
-                source = discord.FFmpegPCMAudio(song_data['url'], **FFMPEG_OPTIONS)
-                vc.play(source, after=lambda e: check_queue(interaction, e))
-                song_history[guild_id].append(song_data)
-
-                embed = discord.Embed(
-                    title="🎶 กำลังเล่นเพลง",
-                    description=f"**[{song_data['title']}]({song_data['webpage_url']})**",
-                    color=discord.Color.green()
-                )
-                if song_data['thumbnail']:
-                     embed.set_thumbnail(url=song_data['thumbnail'])
-                embed.add_field(name="สั่งโดย", value=interaction.user.mention)
-                embed.set_footer(text="Monkey Music Bot 🐒")
-                await interaction.followup.send(embed=embed)
-
-        except Exception as e:
-            await interaction.followup.send(f"❌ เกิดข้อผิดพลาด: {e}")
-
-# --- Slash Command: /queue (ระบบตัดขึ้นหน้าใหม่อัตโนมัติ) ---
+# --- Slash Command: /queue (แยกหน้าอัตโนมัติ) ---
 @bot.tree.command(name="queue", description="ดูรายการเพลงที่อยู่ในคิวทั้งหมดตอนนี้")
 async def queue(interaction: discord.Interaction):
-    guild_id = interaction.guild_id
-    if guild_id not in song_queue or not song_queue[guild_id]:
+    player: wavelink.Player = interaction.guild.voice_client
+    if not player or player.queue.is_empty:
         embed = discord.Embed(description="📭 **ตอนนี้ไม่มีเพลงในคิวเลย ว่างจัด**", color=discord.Color.light_gray())
         return await interaction.response.send_message(embed=embed)
 
     await interaction.response.defer()
 
-    q_list = song_queue[guild_id]
     embeds = []
     current_desc = ""
     
-    for i, song in enumerate(q_list): 
-        line = f"`{i+1}.` [{song['title']}]({song.get('webpage_url', '')})\n"
+    # วนลูปโชว์คิวแบบรองรับความยาวทะลุลิมิต 100 เพลง+
+    for i, track in enumerate(player.queue): 
+        line = f"`{i+1}.` [{track.title}]({track.uri})\n"
         
-        # ตัดขึ้นกล่องใหม่ถ้าข้อความยาวเกิน 3,500 ตัวอักษร
         if len(current_desc) + len(line) > 3500:
             embed = discord.Embed(
                 title=f"📋 รายการเพลงในคิว (ส่วนที่ {len(embeds) + 1})", 
@@ -203,14 +157,13 @@ async def queue(interaction: discord.Interaction):
         else:
             current_desc += line
 
-    # เก็บตกเนื้อหาส่วนที่เหลือลงกล่องสุดท้าย
     if current_desc:
         embed = discord.Embed(
             title=f"📋 รายการเพลงในคิว (ส่วนที่ {len(embeds) + 1})", 
             description=current_desc, 
             color=discord.Color.blue()
         )
-        embed.set_footer(text=f"รวมทั้งหมด {len(q_list)} เพลง | Monkey Music Bot 🐒")
+        embed.set_footer(text=f"รวมทั้งหมด {player.queue.count} เพลง | Monkey Music Bot 🐒")
         embeds.append(embed)
 
     # ทยอยส่งกล่องข้อความ
@@ -224,66 +177,75 @@ async def queue(interaction: discord.Interaction):
 @bot.tree.command(name="jump", description="ข้ามไปเล่นเพลงในคิวตามลำดับที่ระบุทันที")
 @app_commands.describe(index="ลำดับเพลงในคิว (ดูตัวเลขจาก /queue)")
 async def jump(interaction: discord.Interaction, index: int):
-    guild_id = interaction.guild_id
-    vc = interaction.guild.voice_client
+    player: wavelink.Player = interaction.guild.voice_client
 
-    if not vc or not (vc.is_playing() or vc.is_paused()):
+    if not player or not player.playing:
         return await interaction.response.send_message(embed=discord.Embed(description="❌ ไม่ได้เล่นเพลงอะไรอยู่!", color=discord.Color.red()), ephemeral=True)
 
-    if guild_id not in song_queue or not song_queue[guild_id]:
+    if player.queue.is_empty:
         return await interaction.response.send_message(embed=discord.Embed(description="❌ คิวว่างเปล่า!", color=discord.Color.red()), ephemeral=True)
 
-    if index < 1 or index > len(song_queue[guild_id]):
-        return await interaction.response.send_message(embed=discord.Embed(description=f"❌ หาไม่เจอ! กรุณาระบุตัวเลขให้ถูกต้อง (1 ถึง {len(song_queue[guild_id])})", color=discord.Color.red()), ephemeral=True)
+    if index < 1 or index > player.queue.count:
+        return await interaction.response.send_message(embed=discord.Embed(description=f"❌ หาไม่เจอ! กรุณาระบุตัวเลขให้ถูกต้อง (1 ถึง {player.queue.count})", color=discord.Color.red()), ephemeral=True)
 
-    # ดึงเพลงจากคิวแล้วเอามาแทรกไว้คิวที่ 1
-    target_song = song_queue[guild_id].pop(index - 1)
-    song_queue[guild_id].insert(0, target_song)
+    # ดึงเพลงเป้าหมายออกมาจากคิว
+    track = player.queue[index - 1]
+    del player.queue[index - 1]
     
     embed = discord.Embed(
         title="🦘 กระโดดข้ามคิว!",
-        description=f"**ดึงเพลงนี้ขึ้นมาเล่นทันที:**\n[{target_song['title']}]({target_song.get('webpage_url', '')})",
+        description=f"**ดึงเพลงนี้ขึ้นมาเล่นทันที:**\n[{track.title}]({track.uri})",
         color=discord.Color.purple()
     )
     await interaction.response.send_message(embed=embed)
-    vc.stop() # หยุดเพลงปัจจุบัน ระบบจะดึงคิวที่ 1 (เพลงที่เพิ่งแซงคิว) มาเล่นต่อทันที
+    
+    # แทรกไว้เป็นคิวที่ 1 แล้วข้ามเพลงปัจจุบันเพื่อเล่นทันที
+    player.queue.put_at(0, track)
+    player.is_first_play = True
+    await player.skip(force=True)
 
 # --- Slash Command: /back ---
 @bot.tree.command(name="back", description="ย้อนกลับไปเล่นเพลงก่อนหน้าทีละ 1 เพลง")
 async def back(interaction: discord.Interaction):
-    guild_id = interaction.guild_id
-    vc = interaction.guild.voice_client
+    player: wavelink.Player = interaction.guild.voice_client
 
-    if not vc or not (vc.is_playing() or vc.is_paused()):
+    if not player or not player.playing:
         return await interaction.response.send_message(embed=discord.Embed(description="❌ ไม่ได้เล่นเพลงอะไรอยู่!", color=discord.Color.red()), ephemeral=True)
 
-    if guild_id in song_history and len(song_history[guild_id]) > 1:
-        current_song = song_history[guild_id].pop() 
-        prev_song = song_history[guild_id].pop()
-        
-        # เอาเพลงปัจจุบันยัดกลับไปรอคิวที่ 2, เอาเพลงก่อนหน้ายัดไปรอคิวที่ 1
-        song_queue[guild_id].insert(0, current_song)
-        song_queue[guild_id].insert(0, prev_song)
-        
-        embed = discord.Embed(
-            title="⏪ ย้อนกลับ 1 เพลง",
-            description=f"**ครับพี่เดี๋ยวเล่นเพลงเดิมให้:**\n[{prev_song['title']}]({prev_song.get('webpage_url', '')})",
-            color=discord.Color.orange()
-        )
-        await interaction.response.send_message(embed=embed)
-        vc.stop()
-    else:
+    # ประวัติเพลงถูกเก็บไว้ใน player.queue.history
+    if player.queue.history.is_empty:
         embed = discord.Embed(description="❌ **ย้อนสุดเเล้วโว้ยยยย!** (ไม่มีเพลงก่อนหน้า)", color=discord.Color.red())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    current_track = player.current
+    prev_track = player.queue.history[-1] # เพลงล่าสุดที่เพิ่งเล่นจบไป
+    del player.queue.history[-1] # ลบออกจากประวัติ
+
+    # เอาเพลงปัจจุบันยัดกลับไปรอคิวที่ 2
+    if current_track:
+        player.queue.put_at(0, current_track)
+    
+    # เอาเพลงในอดีตยัดไปรอคิวที่ 1
+    player.queue.put_at(0, prev_track)
+    
+    embed = discord.Embed(
+        title="⏪ ย้อนกลับ 1 เพลง",
+        description=f"**ครับพี่เดี๋ยวเล่นเพลงเดิมให้:**\n[{prev_track.title}]({prev_track.uri})",
+        color=discord.Color.orange()
+    )
+    await interaction.response.send_message(embed=embed)
+    
+    player.is_first_play = True
+    await player.skip(force=True)
 
 # --- Slash Command: /skip ---
 @bot.tree.command(name="skip", description="ข้ามเพลงปัจจุบัน")
 async def skip(interaction: discord.Interaction):
-    vc = interaction.guild.voice_client
-    if vc and (vc.is_playing() or vc.is_paused()):
+    player: wavelink.Player = interaction.guild.voice_client
+    if player and player.playing:
         embed = discord.Embed(description="⏩ **ข้ามล่ะ!**", color=discord.Color.gold())
         await interaction.response.send_message(embed=embed)
-        vc.stop() 
+        await player.skip(force=True) 
     else:
         embed = discord.Embed(description="❌ **ไม่ได้เล่นเพลงอะไรอยู่จะให้กูข้ามอะไรก่อน!**", color=discord.Color.red())
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -291,9 +253,10 @@ async def skip(interaction: discord.Interaction):
 # --- Slash Command: /stop ---
 @bot.tree.command(name="stop", description="หยุดเพลงและให้บอทออกจากห้องเสียง")
 async def stop(interaction: discord.Interaction):
-    if interaction.guild.voice_client:
-        song_queue[interaction.guild_id] = [] # ล้างคิว
-        await interaction.guild.voice_client.disconnect()
+    player: wavelink.Player = interaction.guild.voice_client
+    if player:
+        player.queue.clear() # ล้างคิวให้เกลี้ยง
+        await player.disconnect()
         embed = discord.Embed(
             title="👋 บอกให้หยุดเล่นเเเล้วกูจะอยู่ไหม ไกลปู กูไปละ",
             description=f"เตะโดย: {interaction.user.mention}",

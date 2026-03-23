@@ -1,7 +1,7 @@
-from flake import Flake
+from flask import Flask
 from threading import Thread
 
-app = Flake('')
+app = Flask('')
 
 @app.route('/')
 def index():

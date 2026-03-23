@@ -7,8 +7,14 @@ import asyncio
 
 from myserver import server_on
 
+# 🌟 1. ต้องประกาศตัวแปรและสร้างไฟล์คุ้กกี้ก่อน! (ห้ามเอาไปไว้ข้างล่าง)
+cookie_content = os.getenv('YT_COOKIES')
+if cookie_content:
+    with open('cookies.txt', 'w', encoding='utf-8') as f:
+        f.write(cookie_content)
+
+# 🌟 2. จากนั้นค่อยสร้าง YDL_OPTIONS แล้วเรียกใช้ตัวแปรข้างบน
 YDL_OPTIONS = {
-    # 1. เปลี่ยนการเลือกฟอร์แมตให้กว้างที่สุด (ba = best audio, b = best)
     'format': 'ba/b', 
     'noplaylist': True,
     'quiet': True,
@@ -16,15 +22,11 @@ YDL_OPTIONS = {
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     
-    # ดึงคุ้กกี้มาใช้ (ถ้ามี)
+    # ตอนนี้มันจะรู้จัก cookie_content แล้ว
     'cookiefile': 'cookies.txt' if cookie_content else None,
     
-    'ignoreerrors': False, # เปิดไว้เพื่อดู Error เหมือนเดิมดีแล้วครับ
+    'ignoreerrors': False,
     'source_address': '0.0.0.0',
-    
-    # 🌟 2. ลบ youtube_include_dash_manifest ออก เพื่อให้มันมองเห็นไฟล์เสียงทุกแบบ
-    
-    # 🌟 3. ไม้ตายใหม่: หลอก YouTube ว่าเราเปิดจากแอปมือถือ Android (แก้บล็อก 99%)
     'extractor_args': {
         'youtube': {
             'player_client': ['android', 'web']
@@ -32,7 +34,7 @@ YDL_OPTIONS = {
     }
 }
 
-# --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
+# --- ตั้งค่าตำแหน่งไฟล์ FFmpeg (เหมือนเดิม) ---
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'

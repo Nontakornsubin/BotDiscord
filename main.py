@@ -8,17 +8,20 @@ import asyncio
 from myserver import server_on
 
 YDL_OPTIONS = {
-    'format': 'bestaudio/best',
+    # ปรับให้เลือก bestaudio ถ้าไม่มีให้เอา format อะไรก็ได้ที่มีเสียง (ba) หรือดีที่สุดเท่าที่หาได้ (b)
+    'format': 'bestaudio/best', 
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt',
-    'source_address': '0.0.0.0', 
-    # --- เพิ่ม 2 บรรทัดนี้เพื่อหลอกระบบ YouTube ---
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'referer': 'https://www.google.com/',
+    
+    # --- ส่วนสำคัญที่ต้องเพิ่มเพื่อแก้ Requested format ---
+    'ignoreerrors': True,
+    'extract_flat': False,
+    'youtube_include_dash_manifest': False, # ปิดอันนี้ช่วยให้หา format พื้นฐานเจอง่ายขึ้น
+    'source_address': '0.0.0.0',
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

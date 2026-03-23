@@ -19,7 +19,7 @@ else:
 
 # 🌟 2. ตั้งค่า YDL_OPTIONS และ FFMPEG_OPTIONS
 YDL_OPTIONS = {
-    'format': 'bestaudio/best/ba/b/wa/w', 
+    'format': 'bestaudio/best/ba/b/wa/w', # กวาดทุก Format เหมือนเดิม
     'noplaylist': True,
     'quiet': False, 
     'no_warnings': True,
@@ -27,6 +27,13 @@ YDL_OPTIONS = {
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
+    'extractor_args': {
+        'youtube': {
+            # 🌟 จุดสำคัญ: บังคับให้ใช้ Client ของ Android, iOS และ TV เท่านั้น
+            # เพื่อหลบหลีกการซ่อนไฟล์ที่มักจะเกิดกับ Client แบบ Web
+            'player_client': ['android', 'ios', 'tv'] 
+        }
+    }
 }
 
 FFMPEG_OPTIONS = {

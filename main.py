@@ -19,7 +19,7 @@ else:
 
 # 🌟 2. ตั้งค่า YDL_OPTIONS และ FFMPEG_OPTIONS
 YDL_OPTIONS = {
-    'format': 'bestaudio/best/ba/b/wa/w', # กวาดทุก Format เหมือนเดิม
+    'format': 'bestaudio/best', # กลับมาใช้แบบมาตรฐาน
     'noplaylist': True,
     'quiet': False, 
     'no_warnings': True,
@@ -27,11 +27,15 @@ YDL_OPTIONS = {
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
+    
+    # 🌟 1. ทะลวงการบล็อกระดับประเทศ/ภูมิภาคที่ YouTube ชอบแอบทำกับ IP เซิร์ฟเวอร์
+    'geo_bypass': True,
+    
     'extractor_args': {
         'youtube': {
-            # 🌟 จุดสำคัญ: บังคับให้ใช้ Client ของ Android, iOS และ TV เท่านั้น
-            # เพื่อหลบหลีกการซ่อนไฟล์ที่มักจะเกิดกับ Client แบบ Web
-            'player_client': ['android', 'ios', 'tv'] 
+            # 🌟 2. ปลอมตัวเป็นระบบหลังบ้านของ YouTube (web_creator) และ Smart TV
+            # ซึ่งเป็น 2 ช่องทางที่ YouTube แทบจะไม่เคยบล็อก Format เลย!
+            'player_client': ['web_creator', 'tv', 'mweb'] 
         }
     }
 }

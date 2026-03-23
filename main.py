@@ -40,7 +40,7 @@ def check_queue(interaction, error=None):
         next_song = song_queue[guild_id].pop(0)
         
         async def play_next():
-            source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+            source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: check_queue(interaction, e))
             
             # เก็บลงประวัติ
@@ -93,7 +93,7 @@ async def play(interaction: discord.Interaction, search: str):
                 song_queue[guild_id].append(song_data)
                 await interaction.followup.send(f"📝 **เพิ่มลงคิวแล้ว:** {song_data['title']}")
             else:
-                source = await discord.FFmpegOpusAudio.from_probe(song_data['url'], executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+                source = await discord.FFmpegOpusAudio.from_probe(song_data['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
                 vc.play(source, after=lambda e: check_queue(interaction, e))
                 song_history[guild_id].append(song_data)
 
@@ -121,7 +121,7 @@ async def back(interaction: discord.Interaction):
         
         song_queue[guild_id].insert(0, current_song)
         
-        source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], executable=FFMPEG_PATH, **FFMPEG_OPTIONS)
+        source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
         if vc.is_playing(): vc.stop()
         
         vc.play(source, after=lambda e: check_queue(interaction, e))
@@ -156,7 +156,9 @@ async def stop(interaction: discord.Interaction):
     else:
         await interaction.response.send_message("❌ ลิงยังไม่อยู่ในห้องมึงรีบหรอ", ephemeral=True)
         
-server_on()
-
-# 2. ใส่ Token บอทของคุณตรงนี้
-bot.run(os.getenv('TOKEN'))
+if __name__ == "__main__":
+    server_on()
+    try:
+        bot.run(os.getenv('TOKEN'))
+    except Exception as e:
+        print(f"❌ Error starting bot: {e}")

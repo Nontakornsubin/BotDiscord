@@ -19,10 +19,8 @@ if cookie_content:
 else:
     print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
 
-# 🌟 2. สร้าง YDL_OPTIONS แบบให้ yt-dlp จัดการสลับ Client เอง
+# 🌟 2. สร้าง YDL_OPTIONS แบบแหอวน กวาดทุก Format
 YDL_OPTIONS = {
-    # 🌟 จุดสำคัญ: เรียงลำดับจาก เสียงดีสุด -> วิดีโอดีสุด -> เสียงกากสุด -> วิดีโอกากสุด
-    # ถ้า YouTube หวงไฟล์นัก เอาไฟล์อะไรมาก็ได้เดี๋ยว FFmpeg จัดการดึงเสียงเอง!
     'format': 'bestaudio/best/ba/b/wa/w', 
     'noplaylist': True,
     'quiet': False, 
@@ -31,17 +29,12 @@ YDL_OPTIONS = {
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
-    'extractor_args': {
-        'youtube': {
-            # ลองใช้ web และ android ควบคู่กันไป
-            'player_client': ['web', 'android'] 
-        }
-    }
+    # ปล่อยให้ yt-dlp จัดการเรื่อง client เอง
 }
 
-# --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
+# 🌟 3. อัปเดต FFMPEG_OPTIONS ใส่หน้ากาก (User-Agent) กัน YouTube เตะ
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
     'options': '-vn'
 }
 
@@ -69,6 +62,9 @@ bot = MonkeyBot()
 
 # --- ฟังก์ชันจัดการคิวเพลง ---
 def check_queue(interaction, error=None):
+    if error:
+        print(f"Player error: {error}")
+        
     guild_id = interaction.guild_id
     vc = interaction.guild.voice_client
     
@@ -76,7 +72,8 @@ def check_queue(interaction, error=None):
         next_song = song_queue[guild_id].pop(0)
         
         async def play_next():
-            source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], **FFMPEG_OPTIONS)
+            # 🌟 เปลี่ยนมาใช้ FFmpegPCMAudio และเอา await ออก
+            source = discord.FFmpegPCMAudio(next_song['url'], **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: check_queue(interaction, e))
             
             # เก็บลงประวัติ
@@ -151,7 +148,8 @@ async def play(interaction: discord.Interaction, search: str):
                 song_queue[guild_id].append(song_data)
                 await interaction.followup.send(f"📝 **เพิ่มลงคิวแล้ว:** {song_data['title']}")
             else:
-                source = await discord.FFmpegOpusAudio.from_probe(song_data['url'], **FFMPEG_OPTIONS)
+                # 🌟 เปลี่ยนมาใช้ FFmpegPCMAudio และเอา await ออก
+                source = discord.FFmpegPCMAudio(song_data['url'], **FFMPEG_OPTIONS)
                 vc.play(source, after=lambda e: check_queue(interaction, e))
                 song_history[guild_id].append(song_data)
 
@@ -180,7 +178,8 @@ async def back(interaction: discord.Interaction):
         
         song_queue[guild_id].insert(0, current_song)
         
-        source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], **FFMPEG_OPTIONS)
+        # 🌟 เปลี่ยนมาใช้ FFmpegPCMAudio และเอา await ออก
+        source = discord.FFmpegPCMAudio(prev_song['url'], **FFMPEG_OPTIONS)
         if vc.is_playing(): vc.stop()
         
         vc.play(source, after=lambda e: check_queue(interaction, e))

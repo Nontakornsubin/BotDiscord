@@ -21,9 +21,10 @@ else:
 
 # 🌟 2. สร้าง YDL_OPTIONS
 YDL_OPTIONS = {
-    'format': 'bestaudio/best',
+    # 🌟 จุดสำคัญที่ 1: เปลี่ยน format ให้กวาดทุกอย่าง ถ้าไม่มีเสียงล้วน (ba) ก็เอาวิดีโอ+เสียง (b) มาเลย
+    'format': 'ba/bestaudio/b', 
     'noplaylist': True,
-    'quiet': False, # ตั้ง False ไว้เพื่อให้เห็น Log Error ชัดๆ 
+    'quiet': False, 
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
@@ -31,8 +32,9 @@ YDL_OPTIONS = {
     'source_address': '0.0.0.0',
     'extractor_args': {
         'youtube': {
-            # 🌟 จุดสำคัญ: บังคับให้ yt-dlp ปลอมตัวเป็นแอปบนมือถือ หรือทีวี เพื่อหลบการบล็อก
-            'player_client': ['android', 'ios', 'tv'] 
+            # 🌟 จุดสำคัญที่ 2: เอา ios กับ tv ออก เพราะสองตัวนี้แหละตัวดีที่ชอบซ่อนไฟล์เสียง
+            # ให้ลองใช้ web ก่อน (เพราะเรามีคุ้กกี้แล้วน่าจะรอด) ถ้าไม่ได้ค่อยให้มันสลับไป android
+            'player_client': ['web', 'android'] 
         }
     }
 }
@@ -216,4 +218,4 @@ if __name__ == "__main__":
     try:
         bot.run(os.getenv('TOKEN'))
     except Exception as e:
-        print(f"❌ Error starting bot: {e}")
+        print(f"❌ Error starting bot: {e}")    

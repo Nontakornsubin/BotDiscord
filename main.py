@@ -7,7 +7,7 @@ import asyncio
 
 from myserver import server_on
 
-# 🌟 1. ประกาศตัวแปรและสร้างไฟล์คุ้กกี้ให้ถูกต้อง (ใช้เวอร์ชันที่จัดการ \n แล้ว)
+# 🌟 1. ประกาศตัวแปรและสร้างไฟล์คุ้กกี้ให้ถูกต้อง
 cookie_content = os.getenv('YT_COOKIES')
 if cookie_content:
     # แก้ปัญหา \n ที่อาจถูกอ่านเป็นข้อความธรรมดาในบาง Host
@@ -19,10 +19,9 @@ if cookie_content:
 else:
     print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
 
-# 🌟 2. สร้าง YDL_OPTIONS
+# 🌟 2. สร้าง YDL_OPTIONS แบบยืดหยุ่นขั้นสุด
 YDL_OPTIONS = {
-    # 🌟 จุดสำคัญที่ 1: เปลี่ยน format ให้กวาดทุกอย่าง ถ้าไม่มีเสียงล้วน (ba) ก็เอาวิดีโอ+เสียง (b) มาเลย
-    'format': 'ba/bestaudio/b', 
+    'format': 'ba/bestaudio/b', # กวาดทุกอย่าง ถ้าไม่มีเสียงล้วนก็เอาวิดีโอ+เสียง
     'noplaylist': True,
     'quiet': False, 
     'no_warnings': True,
@@ -32,8 +31,7 @@ YDL_OPTIONS = {
     'source_address': '0.0.0.0',
     'extractor_args': {
         'youtube': {
-            # 🌟 จุดสำคัญที่ 2: เอา ios กับ tv ออก เพราะสองตัวนี้แหละตัวดีที่ชอบซ่อนไฟล์เสียง
-            # ให้ลองใช้ web ก่อน (เพราะเรามีคุ้กกี้แล้วน่าจะรอด) ถ้าไม่ได้ค่อยให้มันสลับไป android
+            # ใช้ web ก่อน ถ้าไม่ได้ให้สลับไป android
             'player_client': ['web', 'android'] 
         }
     }
@@ -76,7 +74,6 @@ def check_queue(interaction, error=None):
         next_song = song_queue[guild_id].pop(0)
         
         async def play_next():
-            # ลบ executable="ffmpeg" ออกเพื่อให้ Railway หาเอง
             source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: check_queue(interaction, e))
             
@@ -92,9 +89,11 @@ def check_queue(interaction, error=None):
 @bot.tree.command(name="play", description="เล่นเพลงหรือเพิ่มเพลงเข้าในคิวจากการค้นหาหรือจากลิงก์")
 @app_commands.describe(search="ชื่อเพลงหรือลิงก์ YouTube")
 async def play(interaction: discord.Interaction, search: str):
+    # 1. เช็คว่าผู้ใช้อยู่ในห้องเสียงไหม (ไม่ติดดีเลย์)
     if not interaction.user.voice:
         return await interaction.response.send_message("❌ กูจะรู้ไหมว่าคุณมึงอยู่ห้องไหน!", ephemeral=True)
 
+    # 2. 🌟 ส่ง defer ทันที เพื่อขอเวลา Discord คิดนานกว่า 3 วินาที
     await interaction.response.defer()
 
     # --- ระบบตัดลิงก์เพลย์ลิสต์ (&list=...) ---
@@ -116,9 +115,11 @@ async def play(interaction: discord.Interaction, search: str):
         try:
             # ค้นหาเพลง
             query = f"ytsearch:{clean_search}" if "http" not in clean_search else clean_search
-            info_data = ydl.extract_info(query, download=False)
             
-            # แก้ปัญหา NoneType: เช็คว่าหาข้อมูลเจอไหม
+            # 🌟 จุดแก้สำคัญ: โยนการโหลดข้อมูลไปทำเบื้องหลัง (Background Thread) บอทจะได้ไม่ค้าง
+            info_data = await asyncio.to_thread(ydl.extract_info, query, download=False)
+            
+            # เช็คว่าหาข้อมูลเจอไหม
             if info_data is None:
                 return await interaction.followup.send("❌ ไม่สามารถดึงข้อมูลเพลงได้ (YouTube อาจบล็อก IP หรือคุ้กกี้หมดอายุ)")
 
@@ -132,7 +133,7 @@ async def play(interaction: discord.Interaction, search: str):
             if info is None:
                 return await interaction.followup.send("❌ ข้อมูลเพลงว่างเปล่า!")
 
-            # 🌟 เซฟตี้: ใช้ .get() เพื่อป้องกัน Key Error ถ้าดึงข้อมูลมาไม่ครบ
+            # เซฟตี้: ใช้ .get() ป้องกัน Key Error
             song_data = {
                 'url': info.get('url'), 
                 'title': info.get('title', 'Unknown Title'), 
@@ -177,7 +178,6 @@ async def back(interaction: discord.Interaction):
         
         song_queue[guild_id].insert(0, current_song)
         
-        # ลบ executable="ffmpeg" ออก
         source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], **FFMPEG_OPTIONS)
         if vc.is_playing(): vc.stop()
         
@@ -218,4 +218,4 @@ if __name__ == "__main__":
     try:
         bot.run(os.getenv('TOKEN'))
     except Exception as e:
-        print(f"❌ Error starting bot: {e}")    
+        print(f"❌ Error starting bot: {e}")

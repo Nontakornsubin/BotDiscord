@@ -18,7 +18,7 @@ YDL_OPTIONS = {
     'cookiefile': 'cookies.txt',
     
     # --- ส่วนสำคัญที่ต้องเพิ่มเพื่อแก้ Requested format ---
-    'ignoreerrors': True,
+    'ignoreerrors': False,
     'extract_flat': False,
     'youtube_include_dash_manifest': False, # ปิดอันนี้ช่วยให้หา format พื้นฐานเจอง่ายขึ้น
     'source_address': '0.0.0.0',

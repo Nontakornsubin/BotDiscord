@@ -21,15 +21,22 @@ else:
 
 # 🌟 2. สร้าง YDL_OPTIONS แบบให้ yt-dlp จัดการสลับ Client เอง
 YDL_OPTIONS = {
-    'format': 'bestaudio/best', # โหลดเสียงที่ดีที่สุด
+    # 🌟 จุดสำคัญ: เรียงลำดับจาก เสียงดีสุด -> วิดีโอดีสุด -> เสียงกากสุด -> วิดีโอกากสุด
+    # ถ้า YouTube หวงไฟล์นัก เอาไฟล์อะไรมาก็ได้เดี๋ยว FFmpeg จัดการดึงเสียงเอง!
+    'format': 'bestaudio/best/ba/b/wa/w', 
     'noplaylist': True,
-    'quiet': False, # เปิด Log ไว้ดู Error
+    'quiet': False, 
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
-    # ลบ extractor_args ออก ปล่อยให้ระบบเจาะคลิปติดเรท/คลิปผีเอง
+    'extractor_args': {
+        'youtube': {
+            # ลองใช้ web และ android ควบคู่กันไป
+            'player_client': ['web', 'android'] 
+        }
+    }
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

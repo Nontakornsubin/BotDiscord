@@ -8,21 +8,21 @@ import asyncio
 from myserver import server_on
 
 YDL_OPTIONS = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio/best/m4a/ogg/wav', 
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
-    'ignoreerrors': False,
-    'logtostderr': False,
-    'no_color': True,
-    'source_address': '0.0.0.0', # บังคับใช้ IPv4 ช่วยลดการโดนบล็อก
-    'extract_flat': 'in_playlist', # ไม่ดึงข้อมูลเชิงลึกจนกว่าจะจำเป็น
     'cookiefile': 'cookies.txt',
-
-    'extract_flat': False,
-    'force_generic_extractor': False,
+    
+    # เพิ่มบรรทัดเหล่านี้เพื่อข้ามข้อผิดพลาดเรื่อง Format
+    'ignoreerrors': True,
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+    }],
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
@@ -140,7 +140,7 @@ async def back(interaction: discord.Interaction):
         
         song_queue[guild_id].insert(0, current_song)
         
-        source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
+        source = await discord.FFmpegOpusAudio.from_probe(prev_song['url'], **FFMPEG_OPTIONS)
         if vc.is_playing(): vc.stop()
         
         vc.play(source, after=lambda e: check_queue(interaction, e))

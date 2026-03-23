@@ -41,9 +41,6 @@ class MonkeyBot(commands.Bot):
 
 bot = MonkeyBot()
 
-YDL_OPTIONS = {'format': 'bestaudio/best', 'noplaylist': True, 'quiet': True}
-FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
-
 # --- ฟังก์ชันจัดการคิวเพลง ---
 def check_queue(interaction, error=None):
     guild_id = interaction.guild_id
@@ -53,7 +50,7 @@ def check_queue(interaction, error=None):
         next_song = song_queue[guild_id].pop(0)
         
         async def play_next():
-            source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
+            source = await discord.FFmpegOpusAudio.from_probe(next_song['url'], **FFMPEG_OPTIONS)
             vc.play(source, after=lambda e: check_queue(interaction, e))
             
             # เก็บลงประวัติ
@@ -106,7 +103,7 @@ async def play(interaction: discord.Interaction, search: str):
                 song_queue[guild_id].append(song_data)
                 await interaction.followup.send(f"📝 **เพิ่มลงคิวแล้ว:** {song_data['title']}")
             else:
-                source = await discord.FFmpegOpusAudio.from_probe(song_data['url'], executable="ffmpeg", **FFMPEG_OPTIONS)
+                source = await discord.FFmpegOpusAudio.from_probe(song_data['url'], **FFMPEG_OPTIONS)
                 vc.play(source, after=lambda e: check_queue(interaction, e))
                 song_history[guild_id].append(song_data)
 

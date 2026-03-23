@@ -1,4 +1,5 @@
 discord.py[voice]
 pynacl
+git+https://github.com/yt-dlp/yt-dlp.git@master
 flask
 wavelink

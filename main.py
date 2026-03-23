@@ -7,17 +7,23 @@ import asyncio
 
 from myserver import server_on
 
-# 🌟 1. ต้องประกาศตัวแปรและสร้างไฟล์คุ้กกี้ก่อน! (ห้ามเอาไปไว้ข้างล่าง)
+# 🌟 1. ประกาศตัวแปรและสร้างไฟล์คุ้กกี้ให้ถูกต้อง (ใช้เวอร์ชันที่จัดการ \n แล้ว)
 cookie_content = os.getenv('YT_COOKIES')
 if cookie_content:
+    # แก้ปัญหา \n ที่อาจถูกอ่านเป็นข้อความธรรมดาในบาง Host
+    formatted_cookies = cookie_content.replace('\\n', '\n') 
+    
     with open('cookies.txt', 'w', encoding='utf-8') as f:
-        f.write(cookie_content)
+        f.write(formatted_cookies)
+    print("✅ สร้างไฟล์ cookies.txt สำเร็จ!")
+else:
+    print("⚠️ ไม่พบ YT_COOKIES ใน Environment Variables")
 
-# 🌟 2. จากนั้นค่อยสร้าง YDL_OPTIONS แล้วเรียกใช้ตัวแปรข้างบน
+# 🌟 2. สร้าง YDL_OPTIONS
 YDL_OPTIONS = {
     'format': 'bestaudio/best',
     'noplaylist': True,
-    'quiet': False, # แนะนำให้เปลี่ยนเป็น False ชั่วคราว จะได้เห็น Error ชัดๆ ใน Log
+    'quiet': False, # ตั้ง False ไว้เพื่อให้เห็น Log Error ชัดๆ 
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
@@ -31,7 +37,7 @@ YDL_OPTIONS = {
     }
 }
 
-# --- ตั้งค่าตำแหน่งไฟล์ FFmpeg (เหมือนเดิม) ---
+# --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
@@ -124,12 +130,17 @@ async def play(interaction: discord.Interaction, search: str):
             if info is None:
                 return await interaction.followup.send("❌ ข้อมูลเพลงว่างเปล่า!")
 
+            # 🌟 เซฟตี้: ใช้ .get() เพื่อป้องกัน Key Error ถ้าดึงข้อมูลมาไม่ครบ
             song_data = {
-                'url': info['url'], 
-                'title': info['title'], 
-                'webpage_url': info.get('webpage_url'),
-                'thumbnail': info.get('thumbnail')
+                'url': info.get('url'), 
+                'title': info.get('title', 'Unknown Title'), 
+                'webpage_url': info.get('webpage_url', ''),
+                'thumbnail': info.get('thumbnail', '')
             }
+
+            # ตรวจสอบว่ามี url สำหรับเล่นเพลงจริงๆ
+            if not song_data['url']:
+                 return await interaction.followup.send("❌ ดึงไฟล์เสียงไม่ได้ ลองเพลงอื่นดูนะ!")
 
             if vc.is_playing() or vc.is_paused():
                 song_queue[guild_id].append(song_data)
@@ -144,7 +155,8 @@ async def play(interaction: discord.Interaction, search: str):
                     description=f"**[{song_data['title']}]({song_data['webpage_url']})**",
                     color=discord.Color.green()
                 )
-                embed.set_thumbnail(url=song_data['thumbnail'])
+                if song_data['thumbnail']:
+                     embed.set_thumbnail(url=song_data['thumbnail'])
                 embed.add_field(name="สั่งโดย", value=interaction.user.mention)
                 await interaction.followup.send(embed=embed)
 

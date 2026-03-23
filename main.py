@@ -19,13 +19,19 @@ class MonkeyBot(commands.Bot):
         super().__init__(command_prefix="!Monkey", intents=intents)
 
     async def setup_hook(self):
-        # 🌟 เชื่อมต่อกับ Lavalink Node (ตัวนี้เสถียรและทะลวง YouTube ได้ดี)
+        # 🌟 เปลี่ยนมาใช้ Node ที่ SSL ปกติ และเสถียรกว่าเดิม
+        # ผมใส่ไว้ให้ 2 ตัวเลยครับ ถ้าตัวแรกล่ม ตัวที่สองจะทำงานแทนอัตโนมัติ (Pro ไปอีก!)
         nodes = [
             wavelink.Node(
-                uri="https://lavalink.oops.wtf", 
-                password="www.freelavalink.pw"
+                uri="https://lavalink.lexnet.cc:443", 
+                password="lexn3t_@*_!"
+            ),
+            wavelink.Node(
+                uri="https://lavalink.jirayu.net:443", # Node คนไทย เสถียรมาก!
+                password="youshallnotpass"
             )
         ]
+        
         await wavelink.Pool.connect(client=self, nodes=nodes)
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")

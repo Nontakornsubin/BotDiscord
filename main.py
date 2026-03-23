@@ -7,6 +7,15 @@ import asyncio
 
 from myserver import server_on
 
+YDL_OPTIONS = {
+    'format': 'bestaudio/best',
+    'noplaylist': True,
+    'quiet': True,
+    'no_warnings': True,
+    'default_search': 'ytsearch',
+    'nocheckcertificate': True,
+}
+
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---
 FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'

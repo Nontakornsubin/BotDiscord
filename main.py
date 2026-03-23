@@ -25,6 +25,10 @@ class MonkeyBot(commands.Bot):
     async def setup_hook(self):
         await self.tree.sync()
         print(f"Synced Slash Commands for {self.user}")
+    async def on_ready(self):
+        print(f"✅ บอทออนไลน์แล้วในชื่อ: {self.user}")
+        print(f"🆔 ID: {self.user.id}")
+        print("------")
 
 bot = MonkeyBot()
 

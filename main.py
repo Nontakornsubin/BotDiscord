@@ -14,6 +14,11 @@ YDL_OPTIONS = {
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
+    'ignoreerrors': False,
+    'logtostderr': False,
+    'no_color': True,
+    'source_address': '0.0.0.0', # บังคับใช้ IPv4 ช่วยลดการโดนบล็อก
+    'extract_flat': 'in_playlist', # ไม่ดึงข้อมูลเชิงลึกจนกว่าจะจำเป็น
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

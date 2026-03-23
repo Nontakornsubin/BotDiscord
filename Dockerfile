@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-# บังคับติดตั้ง ffmpeg ในระดับระบบปฏิบัติการ
-RUN apt-get update && apt-get install -y ffmpeg
+# เพิ่ม git เข้าไปในคำสั่งติดตั้งระดับระบบปฏิบัติการ
+RUN apt-get update && apt-get install -y ffmpeg git
 
 # ตั้งค่าพื้นที่ทำงาน
 WORKDIR /app

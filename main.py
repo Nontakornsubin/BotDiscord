@@ -15,19 +15,18 @@ if cookie_content:
 
 # 🌟 2. จากนั้นค่อยสร้าง YDL_OPTIONS แล้วเรียกใช้ตัวแปรข้างบน
 YDL_OPTIONS = {
-    'format': 'bestaudio/best', # 👈 เปลี่ยนตรงนี้เพื่อให้ชัวร์ว่าหาไฟล์เสียงที่ดีที่สุดเสมอ
+    'format': 'bestaudio/best',
     'noplaylist': True,
-    'quiet': True,
+    'quiet': False, # แนะนำให้เปลี่ยนเป็น False ชั่วคราว จะได้เห็น Error ชัดๆ ใน Log
     'no_warnings': True,
     'default_search': 'ytsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
-    'ignoreerrors': False,
     'source_address': '0.0.0.0',
     'extractor_args': {
         'youtube': {
-            # 👈 เอา android ออกชั่วคราว เพราะบางครั้ง client android ของ YouTube ไม่มี format เสียงที่ต้องการ
-            'player_client': ['web'] 
+            # 🌟 จุดสำคัญ: บังคับให้ yt-dlp ปลอมตัวเป็นแอปบนมือถือ หรือทีวี เพื่อหลบการบล็อก
+            'player_client': ['android', 'ios', 'tv'] 
         }
     }
 }

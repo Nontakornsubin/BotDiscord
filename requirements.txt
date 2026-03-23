@@ -1,4 +1,4 @@
 discord.py[voice]
 pynacl
-yt-dlp>=2024.03.10  # 👈 ใส่ >= เพื่อบังคับให้ใช้เวอร์ชันใหม่ๆ เสมอ
+git+https://github.com/yt-dlp/yt-dlp.git@master
 flask

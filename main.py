@@ -20,6 +20,9 @@ YDL_OPTIONS = {
     'source_address': '0.0.0.0', # บังคับใช้ IPv4 ช่วยลดการโดนบล็อก
     'extract_flat': 'in_playlist', # ไม่ดึงข้อมูลเชิงลึกจนกว่าจะจำเป็น
     'cookiefile': 'cookies.txt',
+
+    'extract_flat': False,
+    'force_generic_extractor': False,
 }
 
 # --- ตั้งค่าตำแหน่งไฟล์ FFmpeg ---

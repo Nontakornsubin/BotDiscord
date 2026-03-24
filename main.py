@@ -20,24 +20,26 @@ else:
 # 🌟 2. ตั้งค่า YDL_OPTIONS และ FFMPEG_OPTIONS
 # 🌟 2. ตั้งค่า YDL_OPTIONS แบบเอาตัวรอดขั้นสุด
 YDL_OPTIONS = {
-    'format': 'bestaudio/best', 
+    'format': 'bestaudio/best', # 🌟 เอาตัวที่ดีที่สุดแต่ต้องเป็นไฟล์เสียง
     'noplaylist': True,
-    'quiet': False, 
+    'quiet': True,
     'no_warnings': True,
-    'default_search': 'scsearch', # เปลี่ยนค่าเริ่มต้นเป็น SoundCloud
+    'default_search': 'scsearch',
     'nocheckcertificate': True,
     'cookiefile': 'cookies.txt' if cookie_content else None,
     'source_address': '0.0.0.0',
+    'geo_bypass': True, # 🌟 ข้ามการบล็อกโซน
     'extractor_args': {
-        'youtube': {
-            # 🌟 บังคับให้ปลอมตัวเป็นแอปบน iPhone หรือ iPad เท่านั้น!
-            'player_client': ['ios', 'mweb'] 
-        }
+        'youtube': {'player_client': ['ios', 'mweb']},
+        'soundcloud': {'formats': ['http_mp3', 'hls_mp3']} # 🌟 เน้น MP3 ก่อน Opus เพราะ FFmpeg ชอบมากกว่า
     }
 }
-
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
+    'before_options': (
+        '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 '
+        '-probesize 10M -analyzeduration 10M ' # 🌟 ให้เวลามันวิเคราะห์ข้อมูลมากขึ้น
+        '-user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"'
+    ),
     'options': '-vn'
 }
 

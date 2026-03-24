@@ -30,7 +30,7 @@ YDL_OPTIONS = {
     'source_address': '0.0.0.0',
     'geo_bypass': True, # 🌟 ข้ามการบล็อกโซน
     'extractor_args': {
-        'youtube': {'player_client': ['ios', 'mweb']},
+        'player_client': ['android', 'web_creator'],
         'soundcloud': {'formats': ['http_mp3', 'hls_mp3']} # 🌟 เน้น MP3 ก่อน Opus เพราะ FFmpeg ชอบมากกว่า
     }
 }
